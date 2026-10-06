@@ -3,9 +3,61 @@
 #include <cstring>     // memset
 #include <unistd.h>    // close, read, write
 #include <arpa/inet.h> // sockaddr_in, htons, INADDR_ANY
+#include <thread>
+#include <vector>
+#include <memory>
+#include <atomic>
 
 #include "myTCPConfig.h"
 #include "TCPHelper.h"
+
+struct Client
+{
+    std::thread thread;
+    sockaddr_in socket;
+    int fd;
+    std::atomic<bool> closed {false};
+};
+
+void client_thread(Client* i_client)
+{
+    if (i_client == nullptr)
+    {
+        return;
+    }
+    char buffer[myTCPConfig::BUFFER_SIZE];
+    memset(buffer, 0, myTCPConfig::BUFFER_SIZE);
+    while (true) {
+        size_t len_from_client;
+        TCPHelper::ReturnCode result;
+
+        result = TCPHelper::ReadN(i_client->fd, myTCPConfig::BUFFER_SIZE, buffer, len_from_client);
+        if (result < TCPHelper::ReturnCode::SUCCESS)
+        {
+            perror("[server] read from client failed");
+            break;
+        }
+
+        printf("[server] Received message from client: %s\n", buffer);
+        // Sending back exactly the same buffer/message to client for now
+        result = TCPHelper::WriteN(i_client->fd, buffer, len_from_client);
+        if (result < TCPHelper::ReturnCode::SUCCESS)
+        {
+            perror("[server] write to client failed");
+            break;
+        }
+
+        // Clean up before next read session
+        memset(buffer, 0, len_from_client);
+    }
+
+    close(i_client->fd);
+    i_client->closed = true;
+
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &i_client->socket.sin_addr, client_ip, sizeof(client_ip));
+    printf("[server] client disconnected: %s:%d\n", client_ip, ntohs(i_client->socket.sin_port));
+};
 
 int main() {
     // Forces log output to appear immediately instead of being buffered
@@ -49,51 +101,53 @@ int main() {
     }
     printf("[server] listening... waiting for a client\n");
 
-    // accept() blocks until a client connects. It returns a
-    // new socket file descriptor dedicated to that one client.
-    // The original server_fd keeps listening for other clients
-    sockaddr_in client_addr;
-    socklen_t client_len = sizeof(client_addr);
-    int client_fd = accept(server_fd, (sockaddr*)&client_addr, &client_len);
-    if (client_fd < 0) {
-        perror("accept() failed");
-        close(server_fd);
-        exit(1);
-    }
+    std::vector<std::unique_ptr<Client>> clients;
+    clients.reserve(myTCPConfig::BACKLOG);
 
-    // Convert the client's binary IP address into a human-readable string.
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
-    printf("[server] client connected: %s:%d\n", client_ip, ntohs(client_addr.sin_port));
-
-    char buffer[myTCPConfig::BUFFER_SIZE];
-    memset(buffer, 0, myTCPConfig::BUFFER_SIZE);
-    while (true) {
-        size_t len_from_client;
-        TCPHelper::ReturnCode result;
-
-        result = TCPHelper::ReadN(client_fd, myTCPConfig::BUFFER_SIZE, buffer, len_from_client);
-        if (result < TCPHelper::ReturnCode::SUCCESS)
+    while (true)
+    {
+        std::erase_if(clients, [](const std::unique_ptr<Client>& client)
         {
-            perror("[server] read from client failed");
-            break;
+            if (client->closed && client->thread.joinable())
+            {
+                client->thread.join();
+                return true;
+            }
+            return false;
+        });
+        // accept() blocks until a client connects. It returns a
+        // new socket file descriptor dedicated to that one client.
+        // The original server_fd keeps listening for other clients
+        sockaddr_in client_addr;
+        socklen_t client_len = sizeof(client_addr);
+        int client_fd = accept(server_fd, (sockaddr*)&client_addr, &client_len);
+        if (client_fd < 0) {
+            perror("accept() failed");
+            continue;
         }
 
-        printf("[server] Received message from client: %s\n", buffer);
+        // Convert the client's binary IP address into a human-readable string.
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, sizeof(client_ip));
+        printf("[server] client connected: %s:%d\n", client_ip, ntohs(client_addr.sin_port));
 
-        // Sending back exactly the same buffer/message to client for now
-        result = TCPHelper::WriteN(client_fd, buffer, len_from_client);
-        if (result < TCPHelper::ReturnCode::SUCCESS)
-        {
-            perror("[server] write to client failed");
-            break;
-        }
-
-        // Clean up before next read session
-        memset(buffer, 0, len_from_client);
+        std::unique_ptr<Client> newClient = std::make_unique<Client>();
+        newClient->fd = client_fd;
+        newClient->socket = client_addr;
+        newClient->closed = false;
+        newClient->thread = std::thread(&client_thread, newClient.get());
+        clients.push_back(std::move(newClient));
     }
 
-    close(client_fd);
+    std::erase_if(clients, [](const std::unique_ptr<Client>& client)
+    {
+        if (client->closed && client->thread.joinable())
+        {
+            client->thread.join();
+            return true;
+        }
+        return false;
+    });
     close(server_fd);
     printf("[server] shut down cleanly\n");
     return 0;
