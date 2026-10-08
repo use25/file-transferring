@@ -2,9 +2,10 @@
 
 namespace myTCPConfig
 {
-    const char* SERVER_IP = "127.0.0.1";
-    const int SERVER_PORT = 5000;
-    const int BUFFER_SIZE = 1024;
-    const int ADDR_FAMILY = AF_INET;
-    const int BACKLOG = 5;
+    constexpr const char* SERVER_IP = "127.0.0.1";
+    constexpr int SERVER_PORT = 5000;
+    constexpr int BUFFER_SIZE = 1024;
+    constexpr int ADDR_FAMILY = AF_INET;
+    constexpr int BACKLOG = 5;
+    constexpr bool OPT_REUSES_ADDRESS = true;
 } // namespace myTCPConfig

@@ -12,7 +12,7 @@ endif()
 # time is cheaper than catching them with GDB later.
 add_compile_options(-Wall -Wextra)
 
-add_executable(tcp_server src/tcp_server.cpp src/TCPHelper.cpp)
+add_executable(tcp_server src/server/main.cpp src/TCPHelper.cpp src/server/TCPConnectingClient.cpp src/server/TCPServer.cpp)
 add_executable(tcp_client src/tcp_client.cpp src/TCPHelper.cpp)
 
 foreach(target tcp_server tcp_client)
