@@ -29,7 +29,6 @@ TCPServer::TCPServer()
     if (bind(m_socketFd, (sockaddr*)&m_socketAddress, sizeof(m_socketAddress)) < 0)
     {
         perror("bind() failed");
-        close(m_socketFd);
         return;
     }
 }
@@ -40,10 +39,9 @@ TCPServer::~TCPServer()
     {
         m_connectingClients[i]->JoinThread();
     }
-    close(m_socketFd);
-    if (m_thread.joinable())
+    if (m_socketFd >= 0)
     {
-        m_thread.join();
+        close(m_socketFd);
     }
 }
 
@@ -54,16 +52,11 @@ void TCPServer::StartListen()
     if (listen(m_socketFd, myTCPConfig::BACKLOG) < 0)
     {
         perror("listen() failed");
-        close(m_socketFd);
         return;
     }
 
     printf("[server] Start listening\n");
-    m_thread = std::thread(&TCPServer::ListenThread, this);
-}
 
-void TCPServer::ListenThread()
-{
     sockaddr_in clientAddress;
     socklen_t clientSizeLen = sizeof(clientAddress);
 
@@ -84,9 +77,4 @@ void TCPServer::ListenThread()
         m_connectingClients.back()->StartThread();
         printf("[server] Started client\n");
     }
-}
-
-void TCPServer::JoinThread()
-{
-    m_thread.join();
 }

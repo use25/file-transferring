@@ -7,6 +7,5 @@ int main()
 
     TCPServer myServer = TCPServer();
     myServer.StartListen();
-    myServer.JoinThread();
     return 0;
 }
