@@ -6,8 +6,8 @@
 
 #include "TCPHelper.h"
 
-TCPConnectingClient::TCPConnectingClient(TCPServer& i_server, int i_clientSocketFd, sockaddr_in i_clientAddress)
-    : m_server(i_server)
+TCPConnectingClient::TCPConnectingClient(const TCPServer& i_server, const int i_clientSocketFd, const sockaddr_in i_clientAddress)
+    : m_server((TCPServer&)i_server)
     , m_socketFd(i_clientSocketFd)
     , m_socketAddress(i_clientAddress)
     , m_status(ClientStatus::IDLE)
@@ -16,10 +16,9 @@ TCPConnectingClient::TCPConnectingClient(TCPServer& i_server, int i_clientSocket
 
 TCPConnectingClient::~TCPConnectingClient()
 {
-    if (m_status == ClientStatus::IDLE)
+    if (m_thread.joinable())
     {
-        m_status = ClientStatus::CLOSE_ONGOING;
-        close(m_socketFd);
+        m_thread.join();
     }
 }
 
@@ -31,7 +30,8 @@ void TCPConnectingClient::StartThread()
 void TCPConnectingClient::MainThread()
 {
     memset(m_buffer, 0, myTCPConfig::BUFFER_SIZE);
-    while (true) {
+    while (true)
+    {
         size_t len_from_client;
         TCPHelper::ReturnCode result;
 
@@ -62,14 +62,6 @@ void TCPConnectingClient::MainThread()
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &m_socketAddress.sin_addr, client_ip, sizeof(client_ip));
     printf("[server] client disconnected: %s:%d\n", client_ip, ntohs(m_socketAddress.sin_port));
-}
-
-void TCPConnectingClient::JoinThread()
-{
-    if (m_thread.joinable())
-    {
-        m_thread.join();
-    }
 }
 
 ClientStatus TCPConnectingClient::GetStatus()

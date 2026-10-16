@@ -35,10 +35,6 @@ TCPServer::TCPServer()
 
 TCPServer::~TCPServer()
 {
-    for (int i = 0; i < m_connectingClients.size(); i++)
-    {
-        m_connectingClients[i]->JoinThread();
-    }
     if (m_socketFd >= 0)
     {
         close(m_socketFd);
@@ -47,6 +43,9 @@ TCPServer::~TCPServer()
 
 void TCPServer::StartListen()
 {
+    // TODO: Check whether bind succeeded, if not, return
+    //
+    
     printf("[server] Setting up listening\n");
     m_connectingClients.reserve(myTCPConfig::BACKLOG);
     if (listen(m_socketFd, myTCPConfig::BACKLOG) < 0)
