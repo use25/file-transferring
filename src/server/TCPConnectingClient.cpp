@@ -39,17 +39,25 @@ void TCPConnectingClient::MainThread()
         result = TCPHelper::ReadN(m_socketFd, myTCPConfig::BUFFER_SIZE, m_buffer, len_from_client);
         if (result < TCPHelper::ReturnCode::SUCCESS)
         {
-            perror("[server] read from client failed");
+            if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+            {
+                break;
+            }
+            // TODO: Decide how to handle logic errors without having to disconnect
             break;
         }
 
-        printf("[server] Received message from client: %s\n", m_buffer);
+        printf("[server] Received from client: %.*s\n", (int)len_from_client,  m_buffer);
         // Sending back exactly the same buffer/message to client for now
         m_status = ClientStatus::WRITE_ONGOING;
         result = TCPHelper::WriteN(m_socketFd, m_buffer, len_from_client);
         if (result < TCPHelper::ReturnCode::SUCCESS)
         {
-            perror("[server] write to client failed");
+            if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+            {
+                break;
+            }
+            // TODO: Decide how to handle logic errors without having to disconnect
             break;
         }
 
