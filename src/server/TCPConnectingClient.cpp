@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <cstring>
+#include <cassert>
 
 #include "TCPHelper.h"
 
@@ -16,10 +17,27 @@ TCPConnectingClient::TCPConnectingClient(const TCPServer& i_server, const int i_
 
 TCPConnectingClient::~TCPConnectingClient()
 {
+    Cleanup();
+}
+
+void TCPConnectingClient::Reuse(int i_clientSocketFd, sockaddr_in i_clientAddress)
+{
+    assert(m_status == ClientStatus::POOLED);
+    // Clean up old threads if still running somehow
     if (m_thread.joinable())
     {
         m_thread.join();
     }
+    m_socketFd = i_clientSocketFd;
+    m_socketAddress = i_clientAddress;
+    m_status = ClientStatus::IDLE;
+}
+
+void TCPConnectingClient::Pool()
+{
+    Cleanup();
+    m_socketFd = -1;
+    m_status = ClientStatus::POOLED;
 }
 
 void TCPConnectingClient::StartThread()
@@ -66,6 +84,7 @@ void TCPConnectingClient::MainThread()
     }
 
     close(m_socketFd);
+    m_status = ClientStatus::DISCONNECTED;
 
     char client_ip[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &m_socketAddress.sin_addr, client_ip, sizeof(client_ip));
@@ -75,4 +94,12 @@ void TCPConnectingClient::MainThread()
 ClientStatus TCPConnectingClient::GetStatus()
 {
     return m_status;
+}
+
+void TCPConnectingClient::Cleanup()
+{
+    if (m_thread.joinable())
+    {
+        m_thread.join();
+    }
 }
