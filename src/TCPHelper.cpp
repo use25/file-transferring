@@ -18,6 +18,10 @@ ReturnCode HandleSocketError(const ssize_t i_result)
             perror("[TCPHelper] errno: ECONNRESET");
             return ReturnCode::ERROR_SOCKET_CLOSED;
             break;
+        case EPIPE:
+            perror("[TCPHelper] errno: EPIPE");
+            return ReturnCode::ERROR_SOCKET_CLOSED;
+            break;
         default: //NOTE: Breakpoint if this happens
             perror("[TCPHelper] unhandled errno received");
             return ReturnCode::ERROR_GENERIC;
