@@ -33,6 +33,7 @@ TCPServer::TCPServer()
         perror("bind() failed");
         return;
     }
+    m_isBinded = true;
 }
 
 TCPServer::~TCPServer()
@@ -45,8 +46,11 @@ TCPServer::~TCPServer()
 
 void TCPServer::StartListen()
 {
-    // TODO: Check whether bind succeeded, if not, return
-    //
+    if (!m_isBinded)
+    {
+        printf("[server] StartListen error: Server didn't bind successfully");
+        return;
+    }
 
     printf("[server] Setting up listening\n");
     m_connectingClients.reserve(myTCPConfig::MAX_CLIENTS);

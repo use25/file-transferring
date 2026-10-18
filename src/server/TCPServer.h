@@ -26,4 +26,5 @@ private:
     int m_socketFd;
     std::vector<std::unique_ptr<TCPConnectingClient>> m_connectingClients;
     std::vector<std::unique_ptr<TCPConnectingClient>> m_pooledClients;
+    bool m_isBinded = false;
 };
