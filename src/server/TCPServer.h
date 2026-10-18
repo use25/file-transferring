@@ -15,7 +15,7 @@ public:
     TCPServer();
     ~TCPServer();
 
-    void StartListen();
+    bool StartListen(); // False if it fails to listen
     int GetSocketFd();
 
 private:

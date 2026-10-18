@@ -1,4 +1,5 @@
 #include <csignal>
+#include <cstdlib>
 
 #include "server/TCPConnectingClient.h"
 #include "server/TCPServer.h"
@@ -9,6 +10,9 @@ int main()
     std::signal(SIGPIPE, SIG_IGN);
 
     TCPServer myServer = TCPServer();
-    myServer.StartListen();
-    return 0;
+    if (!myServer.StartListen())
+    {
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }

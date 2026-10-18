@@ -44,12 +44,12 @@ TCPServer::~TCPServer()
     }
 }
 
-void TCPServer::StartListen()
+bool TCPServer::StartListen()
 {
     if (!m_isBinded)
     {
         printf("[server] StartListen error: Server didn't bind successfully");
-        return;
+        return false;
     }
 
     printf("[server] Setting up listening\n");
@@ -58,7 +58,7 @@ void TCPServer::StartListen()
     if (listen(m_socketFd, myTCPConfig::BACKLOG) < 0)
     {
         perror("listen() failed");
-        return;
+        return false;
     }
 
     printf("[server] Start listening\n");
@@ -97,10 +97,11 @@ void TCPServer::StartListen()
         }
         SetupClient(clientSocketFd, clientAddress);
 
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &clientAddress.sin_addr, client_ip, sizeof(client_ip));
-    printf("[server] client connected: %s:%d\n", client_ip, ntohs(clientAddress.sin_port));
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &clientAddress.sin_addr, client_ip, sizeof(client_ip));
+        printf("[server] client connected: %s:%d\n", client_ip, ntohs(clientAddress.sin_port));
     }
+    return true;
 }
 
 void TCPServer::SetupClient(const int i_socketFd, const sockaddr_in i_address)
