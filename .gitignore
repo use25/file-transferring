@@ -1,3 +1,14 @@
 /generated/
 /build/
 /.vscode/
+
+# Generated data files
+/data/1MB.bin
+/data/100MB.bin
+/data/chunk_exact.bin
+/data/chunk_minus_1.bin
+/data/chunk_plus_1.bin
+/data/empty_0B.bin
+/data/one_1B.bin
+/data/SHA256SUMS
+/data/two_chunks_exact.bin
