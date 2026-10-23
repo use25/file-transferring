@@ -86,6 +86,15 @@ void TCPConnectingClient::MainThread()
                     break;
                 }
 
+                // Handle files with exactly 0 bytes
+                if (protocolToSend.m_fileSize == 0)
+                {
+                    fileP.close();
+                    // Clean up before next read session
+                    memset(m_buffer, 0, len_from_client);
+                    continue;
+                }
+
                 while (protocolToSend.m_fileSize > myTCPConfig::BUFFER_SIZE)
                 {
                     protocolToSend.m_fileSize -= myTCPConfig::BUFFER_SIZE;
