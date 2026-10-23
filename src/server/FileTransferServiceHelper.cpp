@@ -22,27 +22,27 @@ namespace FileTransferServiceHelper
 bool LookupFile(std::string_view i_input, std::ifstream& o_fileP)
 {
     {
-git add bool found = false;
-git add for (std::string_view whitelistedFileName : k_whitelistedFileNames)
-git add {
-git add     if (i_input == whitelistedFileName)
-git add     {
-git add git add found = true;
-git add git add break;
-git add     }
-git add }
+        bool found = false;
+        for (std::string_view whitelistedFileName : k_whitelistedFileNames)
+        {
+            if (i_input == whitelistedFileName)
+            {
+                found = true;
+                break;
+            }
+        }
 
-git add if (!found)
-git add {
-git add     return false;
-git add }
+        if (!found)
+        {
+            return false;
+        }
     }
 
     std::filesystem::path path = std::filesystem::path(k_whitelistFolder) / i_input;
     o_fileP = std::ifstream(path, std::ios::binary);
     if (!o_fileP)
     {
-git add return false;
+        return false;
     }
     return true;
 }
@@ -58,7 +58,7 @@ bool GetFileSize(std::ifstream& i_fileP, uint64_t& o_size)
 
     if (posForSizeCheck == std::streampos(-1))
     {
-git add return false;
+        return false;
     }
     o_size = static_cast<uint64_t>(posForSizeCheck);
     return true;

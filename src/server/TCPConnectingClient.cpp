@@ -27,7 +27,7 @@ void TCPConnectingClient::Reuse(int i_clientSocketFd, sockaddr_in i_clientAddres
     // Clean up old threads if still running somehow
     if (m_thread.joinable())
     {
-git add m_thread.join();
+        m_thread.join();
     }
     m_socketFd = i_clientSocketFd;
     m_socketAddress = i_clientAddress;
@@ -51,87 +51,88 @@ void TCPConnectingClient::MainThread()
     memset(m_buffer, 0, myTCPConfig::BUFFER_SIZE);
     while (true)
     {
-git add size_t len_from_client;
-git add TCPHelper::ReturnCode result;
+        size_t len_from_client;
+        TCPHelper::ReturnCode result;
 
-git add m_status = ClientStatus::READ_ONGOING;
-git add result = TCPHelper::ReadN(m_socketFd, myTCPConfig::BUFFER_SIZE, m_buffer, len_from_client);
-git add if (result < TCPHelper::ReturnCode::SUCCESS)
-git add {
-git add     if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
-git add     {
-git add git add break;
-git add     }
-git add     // TODO: Decide how to handle logic errors without having to disconnect
-git add     break;
-git add }
+        m_status = ClientStatus::READ_ONGOING;
+        result = TCPHelper::ReadN(m_socketFd, myTCPConfig::BUFFER_SIZE, m_buffer, len_from_client);
+        if (result < TCPHelper::ReturnCode::SUCCESS)
+        {
+            if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+            {
+                break;
+            }
+            // TODO: Decide how to handle logic errors without having to disconnect
+            break;
+        }
 
-git add printf("[server] Received from client: %.*s\n", (int)len_from_client,  m_buffer);
-git add // Sending back exactly the same buffer/message to client for now
-git add std::ifstream fileP;
-git add std::string clientFileName(m_buffer, len_from_client);
-git add if (FileTransferServiceHelper::LookupFile(std::string_view(clientFileName), fileP))
-git add {
-git add     FileTransferServiceHelper::Protocol protocolToSend{true, 0};
-git add     if (FileTransferServiceHelper::GetFileSize(fileP, protocolToSend.m_fileSize))
-git add     {
-git add git add result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
-git add git add if (result < TCPHelper::ReturnCode::SUCCESS)
-git add git add {
-git add git add     if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
-git add git add     {
-git add git add git add break;
-git add git add     }
-git add git add     // TODO: Decide how to handle logic errors without having to disconnect
-git add git add     break;
-git add git add }
+        printf("[server] Received from client: %.*s\n", (int)len_from_client,  m_buffer);
+        // Sending back exactly the same buffer/message to client for now
+        std::ifstream fileP;
+        std::string clientFileName(m_buffer, len_from_client);
+        if (FileTransferServiceHelper::LookupFile(std::string_view(clientFileName), fileP))
+        {
+            FileTransferServiceHelper::Protocol protocolToSend{true, 0};
+            if (FileTransferServiceHelper::GetFileSize(fileP, protocolToSend.m_fileSize))
+            {
+                result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
+                if (result < TCPHelper::ReturnCode::SUCCESS)
+                {
+                    if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+                    {
+                        break;
+                    }
+                    // TODO: Decide how to handle logic errors without having to disconnect
+                    break;
+                }
 
-git add git add while (protocolToSend.m_fileSize > myTCPConfig::BUFFER_SIZE)
-git add git add {
-git add git add     protocolToSend.m_fileSize -= myTCPConfig::BUFFER_SIZE;
-git add git add     fileP.read(m_buffer, myTCPConfig::BUFFER_SIZE);
-git add git add     result = TCPHelper::HandleSocketError(write(m_socketFd, &m_buffer, myTCPConfig::BUFFER_SIZE));
-git add git add     if (result < TCPHelper::ReturnCode::SUCCESS)
-git add git add     {
-git add git add git add if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
-git add git add git add {
-git add git add git add     break;
-git add git add git add }
-git add git add git add // TODO: Decide how to handle logic errors without having to disconnect
-git add git add git add break;
-git add git add     }
-git add git add }
-git add git add fileP.read(m_buffer, protocolToSend.m_fileSize);
-git add git add result = TCPHelper::HandleSocketError(write(m_socketFd, &m_buffer, protocolToSend.m_fileSize));
-git add git add if (result < TCPHelper::ReturnCode::SUCCESS)
-git add git add {
-git add git add     if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
-git add git add     {
-git add git add git add break;
-git add git add     }
-git add git add     // TODO: Decide how to handle logic errors without having to disconnect
-git add git add     break;
-git add git add }
-git add     }
-git add     fileP.close();
-git add }
-git add else
-git add {
-git add     FileTransferServiceHelper::Protocol protocolToSend{false, 0};
-git add     result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
-git add     if (result < TCPHelper::ReturnCode::SUCCESS)
-git add     {
-git add git add if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
-git add git add {
-git add git add     break;
-git add git add }
-git add git add // TODO: Decide how to handle logic errors without having to disconnect
-git add git add break;
-git add     }
-git add }
+                while (protocolToSend.m_fileSize > myTCPConfig::BUFFER_SIZE)
+                {
+                    protocolToSend.m_fileSize -= myTCPConfig::BUFFER_SIZE;
+                    fileP.read(m_buffer, myTCPConfig::BUFFER_SIZE);
+                    result = TCPHelper::HandleSocketError(write(m_socketFd, &m_buffer, myTCPConfig::BUFFER_SIZE));
+                    if (result < TCPHelper::ReturnCode::SUCCESS)
+                    {
+                        if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+                        {
+                            break;
+                        }
+                        // TODO: Decide how to handle logic errors without having to disconnect
+                        break;
+                    }
+                }
 
-git add // Clean up before next read session
-git add memset(m_buffer, 0, len_from_client);
+                fileP.read(m_buffer, protocolToSend.m_fileSize);
+                result = TCPHelper::HandleSocketError(write(m_socketFd, &m_buffer, protocolToSend.m_fileSize));
+                if (result < TCPHelper::ReturnCode::SUCCESS)
+                {
+                    if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+                    {
+                        break;
+                    }
+                    // TODO: Decide how to handle logic errors without having to disconnect
+                    break;
+                }
+            }
+            fileP.close();
+        }
+        else
+        {
+            FileTransferServiceHelper::Protocol protocolToSend{false, 0};
+            result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
+            if (result < TCPHelper::ReturnCode::SUCCESS)
+            {
+                if (result == TCPHelper::ReturnCode::ERROR_SOCKET_CLOSED)
+                {
+                    break;
+                }
+                // TODO: Decide how to handle logic errors without having to disconnect
+                break;
+            }
+        }
+
+        // Clean up before next read session
+        memset(m_buffer, 0, len_from_client);
     }
 
     close(m_socketFd);
@@ -151,6 +152,6 @@ void TCPConnectingClient::Cleanup()
 {
     if (m_thread.joinable())
     {
-git add m_thread.join();
+        m_thread.join();
     }
 }
