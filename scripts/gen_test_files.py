@@ -19,14 +19,14 @@ WRITE_BLOCK = 64 * 1024  # how much we generate/write at a time (constant memory
 
 def sizes(chunk: int) -> dict[str, int]:
     return {
-git add "empty_0B": 0,
-git add "one_1B": 1,
-git add "chunk_minus_1": chunk - 1,
-git add "chunk_exact": chunk,
-git add "chunk_plus_1": chunk + 1,
-git add "two_chunks_exact": chunk * 2,  # exact multiple, last chunk is full
-git add "1MB": 1024 * 1024,
-git add "100MB": 100 * 1024 * 1024,
+        "empty_0B": 0,
+        "one_1B": 1,
+        "chunk_minus_1": chunk - 1,
+        "chunk_exact": chunk,
+        "chunk_plus_1": chunk + 1,
+        "two_chunks_exact": chunk * 2,  # exact multiple, last chunk is full
+        "1MB": 1024 * 1024,
+        "100MB": 100 * 1024 * 1024,
     }
 
 
@@ -35,12 +35,12 @@ def write_file(path: Path, size: int, seed: int) -> str:
     h = hashlib.sha256()
     remaining = size
     with open(path, "wb") as f:
-git add while remaining > 0:
-git add     n = min(WRITE_BLOCK, remaining)
-git add     block = rng.randbytes(n)
-git add     f.write(block)
-git add     h.update(block)
-git add     remaining -= n
+        while remaining > 0:
+            n = min(WRITE_BLOCK, remaining)
+            block = rng.randbytes(n)
+            f.write(block)
+            h.update(block)
+            remaining -= n
     return h.hexdigest()
 
 
@@ -55,10 +55,10 @@ def main() -> None:
 
     lines = []
     for i, (name, size) in enumerate(sizes(args.chunk).items()):
-git add path = out / f"{name}.bin"
-git add digest = write_file(path, size, seed=i)
-git add lines.append(f"{digest}  {path.name}")
-git add print(f"{path.name:24} {size:>12,} bytes")
+        path = out / f"{name}.bin"
+        digest = write_file(path, size, seed=i)
+        lines.append(f"{digest}  {path.name}")
+        print(f"{path.name:24} {size:>12,} bytes")
 
     (out / "SHA256SUMS").write_text("\n".join(lines) + "\n")
     print(f"\nWrote {len(lines)} files + SHA256SUMS to {out}/")

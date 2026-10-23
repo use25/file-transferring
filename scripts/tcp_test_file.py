@@ -10,10 +10,10 @@ DATA_DIR = "data"
 def recv_exact(sock, n):
     buf = bytearray()
     while len(buf) < n:
-git add chunk = sock.recv(n - len(buf))
-git add if not chunk:
-git add     raise ConnectionError(f"server closed after {len(buf)}/{n} bytes")
-git add buf += chunk
+        chunk = sock.recv(n - len(buf))
+        if not chunk:
+            raise ConnectionError(f"server closed after {len(buf)}/{n} bytes")
+        buf += chunk
     return bytes(buf)
 
 
@@ -28,11 +28,11 @@ def recv_frame(sock):
 
 def request(name):
     with socket.create_connection((HOST, PORT), timeout=5) as sock:
-git add send_frame(sock, name.encode())
-git add header = recv_frame(sock)git add     # framed: 4-byte length, then 16 bytes
-git add approved, size = struct.unpack("<B7xQ", header)
-git add body = recv_exact(sock, size) if approved else b""   # raw, not framed
-git add return approved, size, body
+        send_frame(sock, name.encode())
+        header = recv_frame(sock)            # framed: 4-byte length, then 16 bytes
+        approved, size = struct.unpack("<B7xQ", header)
+        body = recv_exact(sock, size) if approved else b""   # raw, not framed
+        return approved, size, body
 
 
 def sha(data):
@@ -40,24 +40,32 @@ def sha(data):
 
 
 def main():
-    names = sys.argv[1:] or ["chunk_minus_1.bin"]
+    names = sys.argv[1:] or ["empty_0B.bin", "one_1B.bin"]
 
     for bad in ["nope.bin", "../etc/passwd", ""]:
-git add try:
-git add     approved, _, _ = request(bad)
-git add     print(f"DENIED  {bad!r}: {'PASS' if not approved else 'FAIL (approved)'}")
-git add except Exception as e:
-git add     print(f"DENIED  {bad!r}: FAIL ({e})")
+        try:
+            approved, _, _ = request(bad)
+            print(f"DENIED  {bad!r}: {'PASS' if not approved else 'FAIL (approved)'}")
+        except Exception as e:
+            print(f"DENIED  {bad!r}: FAIL ({e})")
 
+    with socket.create_connection((HOST, PORT), timeout=5) as sock:
+        for name in names:
+            send_frame(sock, name.encode())
+            approved, size = struct.unpack("<B7xQ", recv_frame(sock))
+            body = recv_exact(sock, size)
+            print(name, approved, size, len(body))
+
+    '''
     for name in names:
-git add try:
-git add     approved, size, body = request(name)
-git add     with open(f"{DATA_DIR}/{name}", "rb") as f:
-git add git add expected = f.read()
-git add     ok = approved and size == len(expected) and sha(body) == sha(expected)
-git add     print(f"FILE    {name}: {'PASS' if ok else 'FAIL'} (header size={size}, got={len(body)}, expected={len(expected)})")
-git add except Exception as e:
-git add     print(f"FILE    {name}: FAIL ({e})")
-
+        try:
+            approved, size, body = request(name)
+            with open(f"{DATA_DIR}/{name}", "rb") as f:
+                expected = f.read()
+            ok = approved and size == len(expected) and sha(body) == sha(expected)
+            print(f"FILE    {name}: {'PASS' if ok else 'FAIL'} (header size={size}, got={len(body)}, expected={len(expected)})")
+        except Exception as e:
+            print(f"FILE    {name}: FAIL ({e})")
+    '''
 
 main()
