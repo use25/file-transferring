@@ -12,11 +12,15 @@ import time
 
 HOST, PORT = "127.0.0.1", 5000
 
-
 def connect():
     s = socket.create_connection((HOST, PORT), timeout=3)
     return s
 
+def fetch(s, name):
+    s.sendall(frame(name.encode()))
+    approved, size = struct.unpack("<B7xQ", read_frame(s))
+    body = recv_exact(s, size) if approved else b""
+    return approved, size, body
 
 def frame(payload: bytes) -> bytes:
     return struct.pack(">I", len(payload)) + payload
@@ -44,15 +48,6 @@ def rst_close(s):
 
 
 # ---------------------------------------------------------------- tests
-
-def test_exact_1024():
-    """Expect: echo of 1024 bytes comes back identical."""
-    s = connect()
-    msg = b"a" * 1024
-    s.sendall(frame(msg))
-    print("echo identical:", read_frame(s) == msg)
-    s.close()
-
 
 def test_1025_rejected():
     """Expect: server logs ERROR_MAX_LENGTH message and drops THIS client only.
@@ -95,26 +90,8 @@ def test_rst_on_read():
     time.sleep(0.2)  # let the server echo into our unread buffer
     rst_close(s)
 
-
-def test_kill_mid_write():
-    """Flood the server with messages while never reading echoes. The server's send buffer
-    fills, so the server thread blocks INSIDE write(). Then we RST-close.
-    Expect: server write() fails with ECONNRESET/EPIPE (not a crash, since SIGPIPE is ignored).
-    Comment out the SIG_IGN line in main.cpp and rerun: server should die, exit code 141."""
-    s = connect()
-    s.settimeout(2)
-    msg = frame(b"z" * 1024)
-    sent = 0
-    try:
-        for _ in range(100000):
-            s.sendall(msg)
-            sent += 1
-    except socket.timeout:
-        print(f"sendall stalled after {sent} messages -> server is blocked in write()")
-    rst_close(s)
-
-
 def test_split_header():
+
     """Send the 4-byte header in two pieces with a pause between.
     With your CURRENT code this is expected to FAIL (server sees a 2-byte header read and
     disconnects). That is the 'short header' gap, now reproducible on demand.
@@ -130,32 +107,38 @@ def test_split_header():
         print("FAILED as predicted:", e)
     s.close()
 
-
-def test_slow_body():
-    """Same idea for the body: dribble bytes. Expect PASS (body loop accumulates)."""
+def test_exact_1024():
+    """1024-byte name is the max allowed: expect a normal DENIED reply, not a disconnect."""
     s = connect()
-    msg = b"dribble-test"
-    pkt = frame(msg)
-    s.sendall(pkt[:4])
-    for b in msg:
-        s.sendall(bytes([b]))
-        time.sleep(0.05)
-    print("echo identical:", read_frame(s) == msg)
+    approved, _, _ = fetch(s, "a" * 1024)
+    print("denied as expected:", approved == 0)
     s.close()
 
+def test_slow_body():
+    """Dribble a valid filename one byte at a time. Expect: file arrives intact."""
+    s = connect()
+    name = b"one_1B.bin"
+    pkt = frame(name)
+    s.sendall(pkt[:4])
+    for b in name:
+        s.sendall(bytes([b]))
+        time.sleep(0.05)
+    approved, size = struct.unpack("<B7xQ", read_frame(s))
+    body = recv_exact(s, size)
+    print("body ok:", approved == 1 and body == open("data/one_1B.bin", "rb").read())
+    s.close()
 
 def test_many_clients():
-    """20 concurrent clients x 50 messages each. Expect: all echoes match, no server errors.
-    Then watch the pool: 'Setup client from reserved pool' lines on a second run."""
+    """20 concurrent clients x 20 requests of chunk_plus_1.bin. Expect: no errors."""
+    expected = open("data/chunk_plus_1.bin", "rb").read()
     errors = []
 
     def worker(i):
         try:
             s = connect()
-            for j in range(50):
-                m = f"client{i}-msg{j}".encode()
-                s.sendall(frame(m))
-                if read_frame(s) != m:
+            for j in range(20):
+                ok, _, body = fetch(s, "chunk_plus_1.bin")
+                if not ok or body != expected:
                     errors.append((i, j))
             s.close()
         except Exception as e:
@@ -166,6 +149,15 @@ def test_many_clients():
     [t.join() for t in ts]
     print("errors:", errors or "none")
 
+
+def test_kill_mid_transfer():
+    """Request 100MB.bin, read a little, RST-close. Expect: server logs ECONNRESET/EPIPE,
+    that thread exits, the server keeps running."""
+    s = connect()
+    s.sendall(frame(b"100MB.bin"))
+    read_frame(s)
+    s.recv(4096)
+    rst_close(s)
 
 TESTS = {n[5:]: f for n, f in globals().items() if n.startswith("test_")}
 
