@@ -7,6 +7,7 @@
 
 #include "TCPHelper.h"
 #include "FileTransferServiceHelper.h"
+#include "Protocol.h"
 
 TCPConnectingClient::TCPConnectingClient(const TCPServer& i_server, const int i_clientSocketFd, const sockaddr_in i_clientAddress)
     : m_server((TCPServer&)i_server)
@@ -72,7 +73,7 @@ void TCPConnectingClient::MainThread()
         std::string clientFileName(m_buffer, len_from_client);
         if (FileTransferServiceHelper::LookupFile(std::string_view(clientFileName), fileP))
         {
-            FileTransferServiceHelper::Protocol protocolToSend{true, 0};
+            Protocol protocolToSend{true, 0};
             if (FileTransferServiceHelper::GetFileSize(fileP, protocolToSend.m_fileSize))
             {
                 result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
@@ -127,7 +128,7 @@ void TCPConnectingClient::MainThread()
         }
         else
         {
-            FileTransferServiceHelper::Protocol protocolToSend{false, 0};
+            Protocol protocolToSend{false, 0};
             result = TCPHelper::WriteN(m_socketFd, (const void*)&protocolToSend, sizeof(protocolToSend));
             if (result < TCPHelper::ReturnCode::SUCCESS)
             {
