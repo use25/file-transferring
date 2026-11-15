@@ -19,8 +19,7 @@
 ### Client tests
 * `generated/build/tcp_client`: Intended client for regular users. Currently not compatible with `tcp_server`
 * `scripts/tcp_test_file.py <filenames separated by space>`: Temporary replacement of `tcp_client` for testing
-* `scripts/tcp_client_tests.py <tests separated by space>`: Compatible with `tcp_server`. Arguments: `exact_1024`, `1025_rejected`, `zero_length`, `die_mid_body`, `rst_on_read`, `kill_mid_transfer`, `slow_body`, `many_clients`
-* `split_header` is expected to fail at the moment, as it sends only 2 bytes of frame first, then 2 later.
+* `scripts/tcp_client_tests.py <tests separated by space>`: Compatible with `tcp_server`. Arguments: `exact_1024`, `1025_rejected`, `zero_length`, `die_mid_body`, `rst_on_read`, `kill_mid_transfer`, `slow_body`, `many_clients`, `split_header`
 
 ## How it works
 Every request starts with a 4-byte big-endian frame that informs the receiver how many bytes the next chunk should be expected.

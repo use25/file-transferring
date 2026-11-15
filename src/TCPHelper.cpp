@@ -56,7 +56,7 @@ ReturnCode WriteN(const int i_sockFd, const void* i_buffer, const size_t i_len)
     }
 
     size_t totalBytesSent = 0;
-    do
+    while (totalBytesSent < i_len)
     {
         bytesSent = write(i_sockFd, (const char*)i_buffer + totalBytesSent, i_len - totalBytesSent);
         if (ReturnCode socketErrorResult = HandleSocketError(bytesSent); socketErrorResult < ReturnCode::SUCCESS)
@@ -64,23 +64,35 @@ ReturnCode WriteN(const int i_sockFd, const void* i_buffer, const size_t i_len)
             return socketErrorResult;
         }
         totalBytesSent += bytesSent;
-    } while (totalBytesSent < i_len);
+    }
+    return ReturnCode::SUCCESS;
+}
+
+ReturnCode ReadExact(const int i_sockFd, const size_t i_len, void* o_buffer)
+{
+    size_t totalBytesReceived = 0;
+    ssize_t bytesReceived;
+    while (totalBytesReceived < i_len)
+    {
+        bytesReceived = read(i_sockFd, (char*)o_buffer + totalBytesReceived, i_len - totalBytesReceived);
+        if (ReturnCode socketErrorResult = HandleSocketError(bytesReceived); socketErrorResult < ReturnCode::SUCCESS)
+        {
+            return socketErrorResult;
+        }
+        totalBytesReceived += bytesReceived;
+    }
+
     return ReturnCode::SUCCESS;
 }
 
 ReturnCode ReadN(const int i_sockFd, const size_t i_maxLen, void* o_buffer, size_t& o_len)
 {
     uint32_t lenNetwork;
-    ssize_t bytesReceived = read(i_sockFd, &lenNetwork, sizeof(lenNetwork));
+    ReturnCode result = ReadExact(i_sockFd, sizeof(lenNetwork), &lenNetwork);
 
-    if (ReturnCode socketErrorResult = HandleSocketError(bytesReceived); socketErrorResult < ReturnCode::SUCCESS)
+    if (result < ReturnCode::SUCCESS)
     {
-        return socketErrorResult;
-    }
-    if (bytesReceived != sizeof(lenNetwork))
-    {
-        printf("[TCPHelper] read length failed. bytesReceived: %zd\n", bytesReceived);
-        return ReturnCode::ERROR_GENERIC;
+        return result;
     }
 
     o_len = ntohl(lenNetwork);
@@ -96,16 +108,12 @@ ReturnCode ReadN(const int i_sockFd, const size_t i_maxLen, void* o_buffer, size
         return ReturnCode::ERROR_MAX_LENGTH;
     }
 
-    size_t totalBytesReceived = 0;
-    do
+    result = ReadExact(i_sockFd, o_len, o_buffer);
+    if (result < ReturnCode::SUCCESS)
     {
-        bytesReceived = read(i_sockFd, (char*)o_buffer + totalBytesReceived, o_len - totalBytesReceived);
-        if (ReturnCode socketErrorResult = HandleSocketError(bytesReceived); socketErrorResult < ReturnCode::SUCCESS)
-        {
-            return socketErrorResult;
-        }
-        totalBytesReceived += bytesReceived;
-    } while (totalBytesReceived < o_len);
+        return result;
+    }
+
     return ReturnCode::SUCCESS;
 }
 

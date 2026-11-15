@@ -16,6 +16,7 @@ enum ReturnCode : int
 
 ReturnCode HandleSocketError(const ssize_t i_result);
 ReturnCode WriteN(const int i_sockFd, const void* i_buffer, const size_t i_len);
+ReturnCode ReadExact(const int i_sockFd, const size_t i_len, void* o_buffer);
 ReturnCode ReadN(const int i_sockFd, const size_t i_maxLen, void* o_buffer, size_t& o_len);
 
 } // namespace TCPHelper
