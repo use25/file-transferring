@@ -96,6 +96,7 @@ void TCPConnectingClient::MainThread()
                     continue;
                 }
 
+                // TODO: FileTransferServiceHelper function?
                 while (protocolToSend.m_fileSize > myTCPConfig::BUFFER_SIZE)
                 {
                     protocolToSend.m_fileSize -= myTCPConfig::BUFFER_SIZE;

@@ -17,7 +17,18 @@
 4. Run client (through one of the methods in **Client tests** section) on the same machine
 
 ### Client tests
-* `generated/build/tcp_client`: Intended client for regular users. Currently not compatible with `tcp_server`
+* `generated/build/tcp_client`: Intended client for regular users.
+  * When client asks for input, type one of the file names (defined as `k_whitelistedFileNames` in `src/server/FileTransferServiceHelper.cpp`):
+    * `1MB.bin`
+    * `100MB.bin`
+    * `chunk_exact.bin`
+    * `chunk_minus_1.bin`
+    * `chunk_plus_1.bin`
+    * `empty_0B.bin`
+    * `one_1B.bin`
+    * `two_chunks_exact.bin`
+  * Type `quit` or press Ctrl+D to close the client in intended way
+  * Client will write/save the file received from server at folder `downloaded` (defined in `TCPClient.cpp`)
 * `scripts/tcp_test_file.py <filenames separated by space>`: Temporary replacement of `tcp_client` for testing
 * `scripts/tcp_client_tests.py <tests separated by space>`: Compatible with `tcp_server`. Arguments: `exact_1024`, `1025_rejected`, `zero_length`, `die_mid_body`, `rst_on_read`, `kill_mid_transfer`, `slow_body`, `many_clients`, `split_header`
 
@@ -37,7 +48,8 @@ The server then continuously sends bytes representing content of the file.
    * The client sends mismatched filename
 
 ## Future updates
-* CMake project `tcp_client` to be reworked to be compatible with `tcp_server`
+* Clean up TCPClient and server's TCPConnectingClient codes to be easy to read
+* Automated CMake (to automatically add source files)
 * Proper logging and debugging system
 * Implementing shutdown logic when signals are emitted
 * Testing client and server communications through different machines

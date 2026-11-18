@@ -13,7 +13,7 @@ endif()
 add_compile_options(-Wall -Wextra)
 
 add_executable(tcp_server src/server/main.cpp src/TCPHelper.cpp src/server/TCPConnectingClient.cpp src/server/TCPServer.cpp src/server/FileTransferServiceHelper.cpp)
-add_executable(tcp_client src/tcp_client.cpp src/TCPHelper.cpp)
+add_executable(tcp_client src/client/main.cpp src/TCPHelper.cpp src/client/TCPClient.cpp src/server/FileTransferServiceHelper.cpp)
 
 foreach(target tcp_server tcp_client)
     target_include_directories(${target} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)

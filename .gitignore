@@ -12,3 +12,6 @@
 /data/one_1B.bin
 /data/SHA256SUMS
 /data/two_chunks_exact.bin
+
+# TODO: Deal with this after coding TCPClient with hardcoded directory properly
+/downloaded/
